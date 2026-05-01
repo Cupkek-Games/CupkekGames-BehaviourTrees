@@ -1,0 +1,118 @@
+.graphView {
+    flex: 1;
+    --color--red: #ee8695;
+    --color--pink: #fbbbad;
+    --color--orange: rgb(252, 191, 73);
+    --color--clay: #4a7a96;
+    --color--green: #5ab9a8;
+    --color--unity-dark: #2E2E2E;
+    --color--unity-light: #3F3F3F;
+}
+
+.graphView GridBackground {
+    --grid-background-color: rgb(40, 40, 40);
+    --radial-loading-line-color: rgba(120, 120, 120, 0.1);
+    --thick-line-color: rgba(120, 120, 120, 0.1);
+    --spacing: 15;
+    --thick-lines: 0;
+}
+
+.graphElement.root #title {
+    background-color: var(--color--red);
+}
+
+.graphElement.composite #title {
+    background-color: var(--color--pink);
+}
+
+.graphElement.decorator #title {
+    background-color: var(--color--orange);
+}
+
+.graphElement.action #title {
+    background-color: var(--color--clay);
+}
+
+.graphElement.root #title #title-label {
+    color: var(--color--unity-dark);
+    -unity-font-style: bold;
+}
+
+.graphElement.composite #title #title-label {
+    color: var(--color--unity-dark);
+    -unity-font-style: bold;
+}
+
+.graphElement.decorator #title #title-label {
+    color: var(--color--unity-dark);
+    -unity-font-style: bold;
+}
+
+.graphElement.action #title #title-label {
+    color: var(--color--unity-dark);
+    -unity-font-style: bold;
+}
+
+.graphElement #contents > #top > #input {
+    background-color: var(--color--unity-light);
+}
+.graphElement #contents > #top > #output {
+    background-color: var(--color--unity-dark);
+}
+
+.graphElement:selected #selection-border {
+    border-width: 2px;
+    border-color: #44C0FF;
+}
+
+.graphElement:selected:hover #selection-border {
+    border-width: 4px;
+    border-color: #44C0FF;
+}
+
+.graphElement:hover #selection-border {
+    border-width: 4px;
+    border-color: #44C0FF;
+}
+
+.graphElement .stateElement {
+    position: absolute;
+    left: -4px;
+    right: -4px;
+    top: -20px;
+    height: 32px;
+    display: none;
+}
+
+.graphElement.runtime .stateElement
+{
+    display: flex;
+}
+
+.graphElement .stateElement .unity-progress-bar__background {
+    border-radius: 4px;
+    background-color: var(--color--unity-light);
+}
+
+.graphElement .stateElement .unity-progress-bar__progress {
+    border-radius: 4px;
+    background-color: var(--color--clay);
+}
+
+.graphElement .stateElement .unity-progress-bar__title {
+    color: var(--color--unity-dark);
+    -unity-font-style: bold;
+}
+
+.state-idle .stateElement .unity-progress-bar__progress{
+    background-color: var(--color--clay);
+}
+.state-running .stateElement .unity-progress-bar__progress{
+    background-color: var(--color--orange);
+}
+.state-success .stateElement .unity-progress-bar__progress{
+    background-color: var(--color--green);
+}
+.state-fail .stateElement .unity-progress-bar__progress{
+    background-color: var(--color--red);
+}

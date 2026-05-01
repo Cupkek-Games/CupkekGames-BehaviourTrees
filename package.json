@@ -1,0 +1,21 @@
+{
+  "name": "com.cupkekgames.behaviourtrees",
+  "displayName": "CupkekGames BehaviourTrees",
+  "version": "0.1.0",
+  "author": {
+    "name": "CupkekGames",
+    "url": "https://www.docs.cupkek.games"
+  },
+  "unity": "6000.0",
+  "documentationUrl": "https://docs.cupkek.games/",
+  "description": "ScriptableObject-driven behaviour tree framework for Unity. BTNode hierarchy (Action/Composite/Decorator/Root), BehaviourTree asset, BehaviourTreeRunner / RunnerMono, BehaviourTreeManager + custom editor view (BehaviourTreeView, BTNodeView).",
+  "keywords": [
+    "BehaviourTree",
+    "AI",
+    "BTNode",
+    "CupkekGames"
+  ],
+  "dependencies": {
+    "com.cupkekgames.singletons": "0.1.1"
+  }
+}
