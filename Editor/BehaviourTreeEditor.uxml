@@ -2,5 +2,5 @@
     <Style src="BehaviourTreeBase.uss" />
     <Style src="BehaviourTreeEditor.uss" />
     <engine:Label text="Tree View" class="title" />
-    <CupkekGames.BehaviourTree.Editor.BehaviourTreeView />
+    <CupkekGames.BehaviourTrees.Editor.BehaviourTreeView />
 </engine:UXML>
