@@ -22,7 +22,8 @@ namespace CupkekGames.BehaviourTrees.Editor
         public BehaviourTree OriginalTree = null;
         public static event Action<BehaviourTreeEditor> OnGameObjectSelect;
 
-        [MenuItem("Tools/CupkekGames/BehaviourTreeEditor")]
+        // Priority 200 — group 3: authoring tools (behaviour tree graph editor).
+        [MenuItem("Tools/CupkekGames/BehaviourTreeEditor", false, 200)]
         public static void OpenWindow()
         {
             BehaviourTreeEditor wnd = GetWindow<BehaviourTreeEditor>();
