@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using CupkekGames.Data.Primitives;
 using CupkekGames.Graphs;
 using UnityEngine;
@@ -26,9 +27,17 @@ namespace CupkekGames.BehaviourTrees
 
         public override Type NodeBaseType => typeof(BTNode);
 
-        // EditorCanvasType is wired in Phase 4E once BehaviourTreeCanvas
-        // exists. Until then the generic GraphCanvas hosts BTs — fine for
-        // the migration window.
+        public override Type EditorCanvasType
+        {
+            get
+            {
+                // Resolve by name to avoid a Runtime→Editor compile-time
+                // dependency (BehaviourTreeCanvas lives in the editor asmdef).
+                // GraphEditorWindow falls back to GraphCanvas if the type
+                // isn't found.
+                return Type.GetType("CupkekGames.BehaviourTrees.Editor.BehaviourTreeCanvas, CupkekGames.BehaviourTrees.Editor");
+            }
+        }
 
         // ---------------------------------------------------------------
         // Editor convenience
@@ -52,6 +61,78 @@ namespace CupkekGames.BehaviourTrees
             EditorUtility.SetDirty(this);
             AssetDatabase.SaveAssets();
 #endif
+        }
+
+        // ---------------------------------------------------------------
+        // Validation — surfaces tree-shape errors in the editor footer
+        // ---------------------------------------------------------------
+
+        public override IEnumerable<GraphValidationIssue> Validate()
+        {
+            if (_rootNode == null)
+            {
+                yield return new GraphValidationIssue
+                {
+                    Severity = GraphValidationIssue.SeverityLevel.Error,
+                    Message = "Tree has no root node.",
+                };
+            }
+
+            // Inbound count per node — every non-root node must have exactly one parent.
+            var inbound = new Dictionary<string, int>();
+            foreach (var c in Connections)
+            {
+                inbound.TryGetValue(c.TargetNodeGuid.ValueStr, out var n);
+                inbound[c.TargetNodeGuid.ValueStr] = n + 1;
+            }
+
+            foreach (var node in Nodes)
+            {
+                if (node == null) continue;
+                if (node is BTNodeRoot) continue;
+
+                inbound.TryGetValue(node.Guid.ValueStr, out var count);
+                if (count == 0)
+                {
+                    yield return new GraphValidationIssue
+                    {
+                        Severity = GraphValidationIssue.SeverityLevel.Warning,
+                        Message = $"Orphan node — \"{node.DisplayTitle}\" has no parent.",
+                        TargetNodeGuid = node.Guid,
+                    };
+                }
+                else if (count > 1)
+                {
+                    yield return new GraphValidationIssue
+                    {
+                        Severity = GraphValidationIssue.SeverityLevel.Error,
+                        Message = $"\"{node.DisplayTitle}\" has {count} parents — every BT node may have at most one.",
+                        TargetNodeGuid = node.Guid,
+                    };
+                }
+            }
+
+            // Decorators (Single-capacity output) must not have multiple outbound.
+            var outboundByNode = Connections
+                .GroupBy(c => c.SourceNodeGuid.ValueStr)
+                .ToDictionary(g => g.Key, g => g.Count());
+
+            foreach (var node in Nodes)
+            {
+                if (node is BTNodeDecorator dec && !(node is BTNodeComposite))
+                {
+                    outboundByNode.TryGetValue(node.Guid.ValueStr, out var outCount);
+                    if (outCount > 1)
+                    {
+                        yield return new GraphValidationIssue
+                        {
+                            Severity = GraphValidationIssue.SeverityLevel.Error,
+                            Message = $"Decorator \"{node.DisplayTitle}\" has {outCount} children — decorators may have at most one.",
+                            TargetNodeGuid = node.Guid,
+                        };
+                    }
+                }
+            }
         }
 
         // ---------------------------------------------------------------
