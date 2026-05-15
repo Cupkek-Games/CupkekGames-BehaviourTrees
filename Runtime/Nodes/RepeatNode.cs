@@ -1,5 +1,5 @@
-using System.Collections.Generic;
 using System.Threading;
+using CupkekGames.Graphs;
 using UnityEngine;
 
 namespace CupkekGames.BehaviourTrees
@@ -9,67 +9,39 @@ namespace CupkekGames.BehaviourTrees
         [Header("(RepeatAmount <= 0) for infinite")]
         public int RepeatAmount;
         public bool ExitOnFail = false;
+
         private int _repeated = 0;
         private CancellationToken? _cancellationToken;
-        protected override BTNodeRuntimeState OnUpdate(ref Dictionary<string, object> Blackboard, float deltaTime)
+
+        protected override BTNodeRuntimeState OnUpdate(GraphFrame frame, float deltaTime)
         {
             if (!_cancellationToken.HasValue)
             {
-                CancellationToken ct1;
-                if (Blackboard.ContainsKey("CancellationToken"))
-                {
-                    ct1 = (CancellationToken)Blackboard["CancellationToken"];
-                    if (ct1.IsCancellationRequested)
-                    {
-                        return BTNodeRuntimeState.Fail;
-                    }
-                }
-                CancellationToken ct2;
-                if (Blackboard.ContainsKey("CancellationTokenCasterDeath"))
-                {
-                    ct1 = (CancellationToken)Blackboard["CancellationTokenCasterDeath"];
-                    if (ct1.IsCancellationRequested)
-                    {
-                        return BTNodeRuntimeState.Fail;
-                    }
-                }
-                CancellationToken ct3;
-                if (Blackboard.ContainsKey("CancellationTokenCasterInterrupt"))
-                {
-                    ct1 = (CancellationToken)Blackboard["CancellationTokenCasterInterrupt"];
-                    if (ct1.IsCancellationRequested)
-                    {
-                        return BTNodeRuntimeState.Fail;
-                    }
-                }
-
-                _cancellationToken = CancellationTokenSource.CreateLinkedTokenSource(ct1, ct2, ct3).Token;
+                if (!BTCancellation.TryCreateLinkedToken(frame, out var linked))
+                    return BTNodeRuntimeState.Fail;
+                _cancellationToken = linked;
             }
-
             if (_cancellationToken.Value.IsCancellationRequested)
-            {
                 return BTNodeRuntimeState.Fail;
-            }
 
-            BTNodeRuntimeState state = Child.UpdateNode(ref Blackboard, deltaTime);
+            var child = GetChild();
+            if (child == null) return BTNodeRuntimeState.Success;
+
+            var state = child.UpdateNode(frame, deltaTime);
 
             if (ExitOnFail && state == BTNodeRuntimeState.Fail)
-            {
                 return BTNodeRuntimeState.Fail;
-            }
 
             if (state == BTNodeRuntimeState.Success || state == BTNodeRuntimeState.Fail)
             {
                 if (_repeated + 1 == RepeatAmount)
-                {
                     return BTNodeRuntimeState.Success;
-                }
-
                 _repeated++;
             }
 
             return BTNodeRuntimeState.Running;
         }
+
         protected override void OnReset()
         {
             _repeated = 0;

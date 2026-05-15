@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Threading;
+using CupkekGames.Graphs;
 using UnityEngine;
 
 namespace CupkekGames.BehaviourTrees
@@ -15,99 +16,72 @@ namespace CupkekGames.BehaviourTrees
         public override void Prewarm(GameObject parent)
         {
             _childStates = new List<BTNodeRuntimeState>();
-
-            for (int i = 0; i < Children.Count; i++)
-            {
+            foreach (var _ in GetChildren())
                 _childStates.Add(BTNodeRuntimeState.Running);
-            }
         }
 
-        protected override BTNodeRuntimeState OnUpdate(ref Dictionary<string, object> Blackboard, float deltaTime)
+        protected override BTNodeRuntimeState OnUpdate(GraphFrame frame, float deltaTime)
         {
             if (!_cancellationToken.HasValue)
             {
-                CancellationToken ct1;
-                if (Blackboard.ContainsKey("CancellationToken"))
-                {
-                    ct1 = (CancellationToken)Blackboard["CancellationToken"];
-                    if (ct1.IsCancellationRequested)
-                    {
-                        return BTNodeRuntimeState.Fail;
-                    }
-                }
-                CancellationToken ct2;
-                if (Blackboard.ContainsKey("CancellationTokenCasterDeath"))
-                {
-                    ct1 = (CancellationToken)Blackboard["CancellationTokenCasterDeath"];
-                    if (ct1.IsCancellationRequested)
-                    {
-                        return BTNodeRuntimeState.Fail;
-                    }
-                }
-                CancellationToken ct3;
-                if (Blackboard.ContainsKey("CancellationTokenCasterInterrupt"))
-                {
-                    ct1 = (CancellationToken)Blackboard["CancellationTokenCasterInterrupt"];
-                    if (ct1.IsCancellationRequested)
-                    {
-                        return BTNodeRuntimeState.Fail;
-                    }
-                }
-
-                _cancellationToken = CancellationTokenSource.CreateLinkedTokenSource(ct1, ct2, ct3).Token;
+                if (!BTCancellation.TryCreateLinkedToken(frame, out var linked))
+                    return BTNodeRuntimeState.Fail;
+                _cancellationToken = linked;
             }
-
             if (_cancellationToken.Value.IsCancellationRequested)
-            {
                 return BTNodeRuntimeState.Fail;
+
+            var children = GetChildren();
+            if (children.Count == 0) return BTNodeRuntimeState.Success;
+
+            // _childStates is allocated in Prewarm; if Prewarm wasn't called
+            // (e.g. test harness) lazy-init here so we don't NRE.
+            if (_childStates == null || _childStates.Count != children.Count)
+            {
+                _childStates = new List<BTNodeRuntimeState>(children.Count);
+                for (int i = 0; i < children.Count; i++)
+                    _childStates.Add(BTNodeRuntimeState.Running);
             }
 
             bool anyRunning = false;
 
-            for (int i = 0; i < Children.Count; i++)
+            for (int i = 0; i < children.Count; i++)
             {
-                var child = Children[i];
+                var child = children[i];
 
-                // Skip null children
                 if (child == null)
                 {
                     _childStates[i] = BTNodeRuntimeState.Success;
                     continue;
                 }
 
-                // Only update nodes that are still running
                 if (_childStates[i] == BTNodeRuntimeState.Running)
-                {
-                    _childStates[i] = child.UpdateNode(ref Blackboard, deltaTime);
-                }
+                    _childStates[i] = child.UpdateNode(frame, deltaTime);
 
-                // Check the state and apply exit conditions
                 if (_childStates[i] == BTNodeRuntimeState.Running)
                 {
                     anyRunning = true;
                 }
                 else if (_childStates[i] == BTNodeRuntimeState.Fail && ExitOnAnyFail)
                 {
-                    return BTNodeRuntimeState.Fail; // Immediate exit if any fail condition is met
+                    return BTNodeRuntimeState.Fail;
                 }
                 else if (_childStates[i] == BTNodeRuntimeState.Success && ExitOnAnySuccess)
                 {
-                    return BTNodeRuntimeState.Success; // Immediate exit if any success condition is met
+                    return BTNodeRuntimeState.Success;
                 }
             }
 
-            // If no children are running, determine the final state
             return anyRunning ? BTNodeRuntimeState.Running : BTNodeRuntimeState.Success;
         }
 
         protected override void OnReset()
         {
-            _childStates.Clear();
-
-            for (int i = 0; i < Children.Count; i++)
-            {
+            var children = GetChildren();
+            _childStates?.Clear();
+            _childStates ??= new List<BTNodeRuntimeState>(children.Count);
+            for (int i = 0; i < children.Count; i++)
                 _childStates.Add(BTNodeRuntimeState.Running);
-            }
 
             _cancellationToken = null;
         }

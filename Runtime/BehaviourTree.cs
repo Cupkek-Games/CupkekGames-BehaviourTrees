@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
+using CupkekGames.Data.Primitives;
+using CupkekGames.Graphs;
 using UnityEngine;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -8,178 +9,170 @@ using UnityEditor;
 
 namespace CupkekGames.BehaviourTrees
 {
+    /// <summary>
+    /// Tree-shaped graph asset. Now a <see cref="GraphAssetSO"/> — nodes
+    /// and connections live on the base class; <see cref="BehaviourTree"/>
+    /// adds the runtime traversal, the convenience root reference, and
+    /// the runtime-clone bookkeeping.
+    /// </summary>
     [CreateAssetMenu(fileName = "BehaviourTree", menuName = "CupkekGames/BehaviourTree/BehaviourTree")]
-    public class BehaviourTree : ScriptableObject
+    public class BehaviourTree : GraphAssetSO
     {
         private BTNodeRuntimeState _state = BTNodeRuntimeState.Running;
         public BTNodeRuntimeState State => _state;
-        [SerializeField] private List<BTNode> _nodes = new();
-        public ReadOnlyCollection<BTNode> Nodes => _nodes.AsReadOnly();
+
         [SerializeField] private BTNodeRoot _rootNode = null;
         public BTNodeRoot RootNode => _rootNode;
 
-        public void SetRootNode(BTNodeRoot root)
-        {
-            _rootNode = root;
-        }
+        public override Type NodeBaseType => typeof(BTNode);
 
+        // EditorCanvasType is wired in Phase 4E once BehaviourTreeCanvas
+        // exists. Until then the generic GraphCanvas hosts BTs — fine for
+        // the migration window.
+
+        // ---------------------------------------------------------------
+        // Editor convenience
+        // ---------------------------------------------------------------
+
+        /// <summary>
+        /// Spawn a root node if this tree doesn't have one yet. Called by
+        /// the BT canvas (Phase 4E) when first binding to an empty tree.
+        /// </summary>
         public void InitializeEditor()
         {
-            if (_rootNode == null)
-            {
-                _rootNode = CreateNode(typeof(BTNodeRoot)) as BTNodeRoot;
-            }
+#if UNITY_EDITOR
+            if (_rootNode != null) return;
+
+            var root = ScriptableObject.CreateInstance<BTNodeRoot>();
+            root.name = nameof(BTNodeRoot);
+            root.hideFlags = HideFlags.HideInHierarchy;
+            AssetDatabase.AddObjectToAsset(root, this);
+            AddNode(root);
+            _rootNode = root;
+            EditorUtility.SetDirty(this);
+            AssetDatabase.SaveAssets();
+#endif
         }
 
-        public BTNodeRuntimeState UpdateTree(ref Dictionary<string, object> Blackboard, float deltaTime)
+        // ---------------------------------------------------------------
+        // Hooks from GraphAssetSO
+        // ---------------------------------------------------------------
+
+        public override void OnNodeAdded(GraphNodeSO node)
         {
-            if (_state != BTNodeRuntimeState.Running)
+            if (node is BTNodeRoot root && _rootNode == null)
+                _rootNode = root;
+        }
+
+        public override void OnNodeRemoved(GraphNodeSO node)
+        {
+            if (ReferenceEquals(node, _rootNode))
+                _rootNode = null;
+        }
+
+        // ---------------------------------------------------------------
+        // Connection helpers
+        // ---------------------------------------------------------------
+
+        /// <summary>Find a node SO by GUID. Used by composite/decorator helpers to resolve children at runtime.</summary>
+        public BTNode FindBTNode(SerializedGuid guid)
+        {
+            foreach (var n in Nodes)
             {
-                return _state;
+                if (n is BTNode bt && bt.Guid == guid)
+                    return bt;
             }
+            return null;
+        }
 
-            _state = _rootNode.UpdateNode(ref Blackboard, deltaTime);
+        /// <summary>Children of <paramref name="parent"/> via connections (or legacy fields as fallback).</summary>
+        public IReadOnlyList<BTNode> GetChildren(BTNode parent)
+        {
+            return parent switch
+            {
+                BTNodeComposite composite => composite.GetChildren(),
+                BTNodeDecorator decorator => decorator.GetChild() is { } single
+                    ? new List<BTNode> { single }
+                    : (IReadOnlyList<BTNode>)Array.Empty<BTNode>(),
+                _ => Array.Empty<BTNode>(),
+            };
+        }
 
+        /// <summary>
+        /// Depth-first traversal from <paramref name="node"/>. Walks
+        /// children via connections (or legacy fields).
+        /// </summary>
+        public void Traverse(BTNode node, Action<BTNode> visitor)
+        {
+            if (node == null || visitor == null) return;
+            visitor(node);
+            foreach (var c in GetChildren(node))
+                Traverse(c, visitor);
+        }
+
+        // ---------------------------------------------------------------
+        // Runtime
+        // ---------------------------------------------------------------
+
+        public BTNodeRuntimeState UpdateTree(GraphFrame frame, float deltaTime)
+        {
+            if (_state != BTNodeRuntimeState.Running) return _state;
+            if (_rootNode == null) return BTNodeRuntimeState.Success;
+
+            _state = _rootNode.UpdateNode(frame, deltaTime);
             return _state;
         }
 
-        public BTNode CreateNode(Type type)
-        {
-            if (Application.isPlaying)
-            {
-                Debug.LogError($"Can't add new node in play mode");
-                return null;
-            }
-
-            if (!type.IsSubclassOf(typeof(BTNode)))
-            {
-                Debug.LogError($"Type {type.Name} is not a subclass of BTNode.");
-                return null;
-            }
-
-            BTNode node = ScriptableObject.CreateInstance(type) as BTNode;
-            if (node == null)
-            {
-                Debug.LogError($"Failed to create an instance of {type.Name}.");
-                return null;
-            }
-
-            node.name = type.Name;
-
-            _nodes.Add(node);
-
-#if UNITY_EDITOR
-            EditorUtility.SetDirty(this);
-            AssetDatabase.AddObjectToAsset(node, this);
-            AssetDatabase.SaveAssets();
-#endif
-
-            return node;
-        }
-
-        public void DeleteNode(Guid guid)
-        {
-            int indexToDelete = -1;
-            for (int i = 0; i < _nodes.Count; i++)
-            {
-                if (_nodes[i].Guid.Value() == guid)
-                {
-                    indexToDelete = i;
-                }
-            }
-
-            if (indexToDelete != -1)
-            {
-                BTNode nodeToDelete = _nodes[indexToDelete];
-
-                _nodes.RemoveAt(indexToDelete);
-
-#if UNITY_EDITOR
-                AssetDatabase.RemoveObjectFromAsset(nodeToDelete);
-                AssetDatabase.SaveAssets();
-#endif
-            }
-        }
-
-        public void AddChild(BTNode parent, BTNode child, int index)
-        {
-            if (parent is BTNodeDecorator decorator)
-            {
-                decorator.Child = child;
-            }
-            else if (parent is BTNodeComposite composite)
-            {
-                composite.Children[index] = child;
-            }
-        }
-
-        public void RemoveChild(BTNode parent, BTNode child, int index)
-        {
-            if (parent is BTNodeDecorator decorator)
-            {
-                decorator.Child = null;
-            }
-            else if (parent is BTNodeComposite composite)
-            {
-                composite.Children[index] = null;
-            }
-        }
-
-        public List<BTNode> GetChildren(BTNode parent)
-        {
-            if (parent is BTNodeDecorator decorator)
-            {
-                if (decorator.Child != null)
-                {
-                    return new List<BTNode>() { decorator.Child };
-                }
-            }
-            else if (parent is BTNodeComposite composite)
-            {
-                return composite.Children;
-            }
-
-            return new List<BTNode>();
-        }
-
-        public void Traverse(BTNode node, Action<BTNode> visiter)
-        {
-            if (node)
-            {
-                visiter.Invoke(node);
-
-                var children = GetChildren(node);
-
-                children.ForEach(n =>
-                {
-                    Traverse(n, visiter);
-                });
-            }
-        }
-
-        public BehaviourTree Clone()
-        {
-            BehaviourTree clone = Instantiate(this);
-
-            clone.SetRootNode(_rootNode.Clone() as BTNodeRoot);
-
-            clone._nodes = new();
-
-            Traverse(clone.RootNode, (n) =>
-            {
-                clone._nodes.Add(n);
-            });
-
-            return clone;
-        }
         public void ResetTree()
         {
-            foreach (BTNode node in Nodes)
+            foreach (var n in Nodes)
+                if (n is BTNode bt) bt.ResetNode();
+            _state = BTNodeRuntimeState.Running;
+        }
+
+        /// <summary>
+        /// Build a runtime clone: a fresh <see cref="BehaviourTree"/>
+        /// instance with duplicated node SOs (each keeps the original's
+        /// Guid so connections stay valid) and a duplicated connection
+        /// list. OwnerTree is wired up on every cloned node so
+        /// composite / decorator child lookups work without re-running
+        /// the connection list manually.
+        /// </summary>
+        public BehaviourTree Clone()
+        {
+            var clone = ScriptableObject.CreateInstance<BehaviourTree>();
+            clone.name = name;
+
+            // Clone every BTNode SO, keeping each one's Guid so the
+            // original connection list remains valid against the clone's
+            // node set.
+            foreach (var n in Nodes)
             {
-                node.ResetNode();
+                if (n is not BTNode bt) continue;
+                var copy = bt.Clone();
+                copy.OwnerTree = clone;
+                clone.AddNode(copy);
+                if (bt == _rootNode) clone._rootNode = (BTNodeRoot)copy;
             }
 
-            _state = BTNodeRuntimeState.Running;
+            // Copy connections verbatim — they reference node Guids, which
+            // we preserved on clone, so they keep pointing at the right
+            // (cloned) nodes inside the clone.
+            foreach (var conn in Connections)
+            {
+                clone.AddConnection(new GraphConnection
+                {
+                    Guid = conn.Guid,
+                    SourceNodeGuid = conn.SourceNodeGuid,
+                    TargetNodeGuid = conn.TargetNodeGuid,
+                    SourcePortId = conn.SourcePortId,
+                    TargetPortId = conn.TargetPortId,
+                    Label = conn.Label,
+                    OrderIndex = conn.OrderIndex,
+                });
+            }
+
+            return clone;
         }
     }
 }

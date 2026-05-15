@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+using CupkekGames.Graphs;
 using UnityEngine;
 
 namespace CupkekGames.BehaviourTrees
@@ -7,16 +7,14 @@ namespace CupkekGames.BehaviourTrees
     {
         public string Message;
 
-        protected override BTNodeRuntimeState OnUpdate(ref Dictionary<string, object> Blackboard, float deltaTime)
+        protected override BTNodeRuntimeState OnUpdate(GraphFrame frame, float deltaTime)
         {
             Debug.Log($"{Message}");
-
             return BTNodeRuntimeState.Success;
         }
 
         protected override void OnReset()
         {
-
         }
     }
 }

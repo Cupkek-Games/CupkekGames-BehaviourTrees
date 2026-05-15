@@ -1,5 +1,4 @@
-using System.Collections.Generic;
-using UnityEngine;
+using CupkekGames.Graphs;
 
 namespace CupkekGames.BehaviourTrees
 {
@@ -7,27 +6,15 @@ namespace CupkekGames.BehaviourTrees
     {
         public string Key = "PersistentContextKey";
 
-        protected override BTNodeRuntimeState OnUpdate(ref Dictionary<string, object> Blackboard, float deltaTime)
+        protected override BTNodeRuntimeState OnUpdate(GraphFrame frame, float deltaTime)
         {
             if (BehaviourTreeManager.PersistentContext.TryGetValue(Key, out object value))
             {
-                // If the key exists, toggle its value
                 if (value is int intValue)
-                {
-                    if (intValue == 0)
-                    {
-                        intValue = 1; // Toggle to true
-                    }
-                    else
-                    {
-                        intValue = 0; // Toggle to false
-                    }
-                    BehaviourTreeManager.PersistentContext[Key] = intValue;
-                }
+                    BehaviourTreeManager.PersistentContext[Key] = intValue == 0 ? 1 : 0;
             }
             else
             {
-                // If the key does not exist, initialize it to true
                 BehaviourTreeManager.PersistentContext[Key] = 1;
             }
 
@@ -36,7 +23,6 @@ namespace CupkekGames.BehaviourTrees
 
         protected override void OnReset()
         {
-
         }
     }
 }

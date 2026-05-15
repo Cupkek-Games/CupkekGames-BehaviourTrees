@@ -1,66 +1,28 @@
-using System;
-using System.Collections.Generic;
 using System.Threading;
-using UnityEngine;
+using CupkekGames.Graphs;
 
 namespace CupkekGames.BehaviourTrees
 {
     public class DelayNode : BTNodeDecorator
     {
         public float Duration = 1;
-        private float _passed = -1f;
 
+        private float _passed = -1f;
         private CancellationToken? _cancellationToken;
         protected bool _completed = false;
 
-        protected override BTNodeRuntimeState OnUpdate(ref Dictionary<string, object> Blackboard, float deltaTime)
+        protected override BTNodeRuntimeState OnUpdate(GraphFrame frame, float deltaTime)
         {
             if (!_cancellationToken.HasValue)
             {
-                CancellationToken ct1;
-                if (Blackboard.ContainsKey("CancellationToken"))
-                {
-                    ct1 = (CancellationToken)Blackboard["CancellationToken"];
-                    if (ct1.IsCancellationRequested)
-                    {
-                        return BTNodeRuntimeState.Fail;
-                    }
-                }
-                CancellationToken ct2;
-                if (Blackboard.ContainsKey("CancellationTokenCasterDeath"))
-                {
-                    ct2 = (CancellationToken)Blackboard["CancellationTokenCasterDeath"];
-                    if (ct2.IsCancellationRequested)
-                    {
-                        return BTNodeRuntimeState.Fail;
-                    }
-                }
-                CancellationToken ct3;
-                if (Blackboard.ContainsKey("CancellationTokenCasterInterrupt"))
-                {
-                    ct3 = (CancellationToken)Blackboard["CancellationTokenCasterInterrupt"];
-                    if (ct3.IsCancellationRequested)
-                    {
-                        return BTNodeRuntimeState.Fail;
-                    }
-                }
-
-                _cancellationToken = CancellationTokenSource.CreateLinkedTokenSource(ct1, ct2, ct3).Token;
+                if (!BTCancellation.TryCreateLinkedToken(frame, out var linked))
+                    return BTNodeRuntimeState.Fail;
+                _cancellationToken = linked;
             }
-
             if (_cancellationToken.Value.IsCancellationRequested)
-            {
                 return BTNodeRuntimeState.Fail;
-            }
 
-            if (_passed < 0f)
-            {
-                _passed = deltaTime;
-            }
-            else
-            {
-                _passed += deltaTime;
-            }
+            _passed = _passed < 0f ? deltaTime : _passed + deltaTime;
 
             if (_passed > Duration)
             {
@@ -68,7 +30,7 @@ namespace CupkekGames.BehaviourTrees
                 if (!_completed)
                 {
                     _completed = true;
-                    continueExecution = OnDelayComplete(ref Blackboard);
+                    continueExecution = OnDelayComplete(frame);
                 }
 
                 if (!continueExecution)
@@ -78,16 +40,13 @@ namespace CupkekGames.BehaviourTrees
                     return BTNodeRuntimeState.Fail;
                 }
 
-                BTNodeRuntimeState state = BTNodeRuntimeState.Success;
-
-                if (Child != null)
-                {
-                    state = Child.UpdateNode(ref Blackboard, deltaTime);
-                }
+                var state = BTNodeRuntimeState.Success;
+                var child = GetChild();
+                if (child != null)
+                    state = child.UpdateNode(frame, deltaTime);
 
                 if (state == BTNodeRuntimeState.Success || state == BTNodeRuntimeState.Fail)
                 {
-                    // Reset for next call
                     _passed = -1f;
                     _completed = false;
                 }
@@ -97,13 +56,15 @@ namespace CupkekGames.BehaviourTrees
 
             return BTNodeRuntimeState.Running;
         }
+
         protected override void OnReset()
         {
-            _passed = -1;
+            _passed = -1f;
             _cancellationToken = null;
             _completed = false;
         }
-        protected virtual bool OnDelayComplete(ref Dictionary<string, object> Blackboard)
+
+        protected virtual bool OnDelayComplete(GraphFrame frame)
         {
             return true;
         }

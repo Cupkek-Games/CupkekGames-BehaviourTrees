@@ -1,82 +1,53 @@
-using System.Collections.Generic;
 using System.Threading;
-using UnityEngine;
+using CupkekGames.Graphs;
 
 namespace CupkekGames.BehaviourTrees
 {
+    /// <summary>
+    /// Composite that branches based on a value in
+    /// <see cref="BehaviourTreeManager.PersistentContext"/>. The first
+    /// child runs when the stored int matches <see cref="Condition"/>,
+    /// otherwise the second child runs. The branch is locked on first
+    /// evaluation and not re-checked until <see cref="OnReset"/>.
+    /// </summary>
     public class PersistentContextNodeCondition : BTNodeComposite
     {
         public string Key = "PersistentContextKey";
         public int Condition = 0;
+
         private CancellationToken? _cancellationToken;
         private int _selected = -1;
 
-        public override void Prewarm(GameObject parent)
-        {
-        }
-
-        protected override BTNodeRuntimeState OnUpdate(ref Dictionary<string, object> Blackboard, float deltaTime)
+        protected override BTNodeRuntimeState OnUpdate(GraphFrame frame, float deltaTime)
         {
             if (!_cancellationToken.HasValue)
             {
-                CancellationToken ct1;
-                if (Blackboard.ContainsKey("CancellationToken"))
-                {
-                    ct1 = (CancellationToken)Blackboard["CancellationToken"];
-                    if (ct1.IsCancellationRequested)
-                    {
-                        return BTNodeRuntimeState.Fail;
-                    }
-                }
-                CancellationToken ct2;
-                if (Blackboard.ContainsKey("CancellationTokenCasterDeath"))
-                {
-                    ct1 = (CancellationToken)Blackboard["CancellationTokenCasterDeath"];
-                    if (ct1.IsCancellationRequested)
-                    {
-                        return BTNodeRuntimeState.Fail;
-                    }
-                }
-                CancellationToken ct3;
-                if (Blackboard.ContainsKey("CancellationTokenCasterInterrupt"))
-                {
-                    ct1 = (CancellationToken)Blackboard["CancellationTokenCasterInterrupt"];
-                    if (ct1.IsCancellationRequested)
-                    {
-                        return BTNodeRuntimeState.Fail;
-                    }
-                }
-
-                _cancellationToken = CancellationTokenSource.CreateLinkedTokenSource(ct1, ct2, ct3).Token;
+                if (!BTCancellation.TryCreateLinkedToken(frame, out var linked))
+                    return BTNodeRuntimeState.Fail;
+                _cancellationToken = linked;
             }
-
             if (_cancellationToken.Value.IsCancellationRequested)
-            {
                 return BTNodeRuntimeState.Fail;
-            }
+
+            var children = GetChildren();
+            if (children.Count == 0) return BTNodeRuntimeState.Success;
 
             if (_selected == -1)
             {
-                bool condition = false;
-                if (BehaviourTreeManager.PersistentContext.TryGetValue(Key, out object contextValue))
+                bool match = false;
+                if (BehaviourTreeManager.PersistentContext.TryGetValue(Key, out object stored)
+                    && stored is int intValue)
                 {
-                    if (contextValue is int intValue)
-                    {
-                        condition = Condition == intValue;
-                    }
+                    match = Condition == intValue;
                 }
-
-                if (condition)
-                {
-                    _selected = 0;
-                }
-                else
-                {
-                    _selected = 1;
-                }
+                _selected = match ? 0 : 1;
             }
 
-            return Children[_selected].UpdateNode(ref Blackboard, deltaTime);
+            if (_selected >= children.Count) return BTNodeRuntimeState.Success;
+            var child = children[_selected];
+            return child != null
+                ? child.UpdateNode(frame, deltaTime)
+                : BTNodeRuntimeState.Success;
         }
 
         protected override void OnReset()
