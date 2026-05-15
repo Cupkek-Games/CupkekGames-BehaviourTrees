@@ -17,19 +17,13 @@ namespace CupkekGames.BehaviourTrees
     /// the runtime-clone bookkeeping.
     /// </summary>
     [CreateAssetMenu(fileName = "BehaviourTree", menuName = "CupkekGames/BehaviourTree/BehaviourTree")]
-    public class BehaviourTree : GraphAssetSO, IBlackboardOwner
+    public class BehaviourTree : GraphAssetSO
     {
         private BTNodeRuntimeState _state = BTNodeRuntimeState.Running;
         public BTNodeRuntimeState State => _state;
 
         [SerializeField] private BTNodeRoot _rootNode = null;
         public BTNodeRoot RootNode => _rootNode;
-
-        [SerializeReference]
-        [SerializeField]
-        private List<BlackboardVariable> _blackboardVariables = new List<BlackboardVariable>();
-
-        public IReadOnlyList<BlackboardVariable> BlackboardVariables => _blackboardVariables;
 
         public override Type NodeBaseType => typeof(BTNode);
 
