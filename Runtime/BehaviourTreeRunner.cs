@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using CupkekGames.Graphs;
 using UnityEngine;
 
@@ -11,6 +12,14 @@ namespace CupkekGames.BehaviourTrees
     /// </summary>
     public class BehaviourTreeRunner
     {
+        /// <summary>
+        /// Every runner currently alive. Populated in the constructor,
+        /// cleaned in <see cref="Dispose"/>. The editor uses this to
+        /// reflect runtime state back onto authored nodes (per-node
+        /// state pulse during play).
+        /// </summary>
+        public static readonly List<BehaviourTreeRunner> ActiveRunners = new List<BehaviourTreeRunner>();
+
         private BehaviourTree _originalTree;
         public BehaviourTree OriginalTree => _originalTree;
 
@@ -37,6 +46,8 @@ namespace CupkekGames.BehaviourTrees
             // happen via frame.SetLocal in scoped decorators.
             BlackboardSeeder.Apply(_originalTree, Blackboard);
             RootFrame = new GraphFrame(Blackboard);
+
+            ActiveRunners.Add(this);
         }
 
         public void Prewarm(GameObject parent)
@@ -49,6 +60,7 @@ namespace CupkekGames.BehaviourTrees
         {
             foreach (var n in _runtimeClone.Nodes)
                 if (n is BTNode bt) bt.Dispose();
+            ActiveRunners.Remove(this);
         }
 
         public BTNodeRuntimeState UpdateTree(float deltaTime)

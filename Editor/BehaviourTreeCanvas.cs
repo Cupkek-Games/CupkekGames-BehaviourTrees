@@ -68,9 +68,11 @@ namespace CupkekGames.BehaviourTrees.Editor
 
         protected override NodeElement CreateNodeElement(GraphNodeSO node)
         {
-            // Sticky notes + general fallback handled by the base. BT-specific
-            // node visuals will live here when state-pulse / debug overlays
-            // land alongside a runtime-clone hook (deferred).
+            // BTNodeElement adds the runtime-state indicator that mirrors
+            // an active BehaviourTreeRunner's clone-node state during play.
+            // Sticky notes fall through to the base, which returns a
+            // StickyNoteElement.
+            if (node is BTNode bt) return new BTNodeElement(this, bt);
             return base.CreateNodeElement(node);
         }
     }
