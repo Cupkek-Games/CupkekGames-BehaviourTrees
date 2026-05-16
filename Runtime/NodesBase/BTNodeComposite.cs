@@ -26,6 +26,9 @@ namespace CupkekGames.BehaviourTrees
 
         public override Color HeaderColor => new Color(0.55f, 0.45f, 0.30f);
 
+        /// <summary>Three-bar glyph — composites fan out to multiple children.</summary>
+        public override string IconGlyph => "≡";
+
         static readonly IReadOnlyList<GraphPortDef> MultiOutput = new[]
         {
             new GraphPortDef { Capacity = PortCapacity.Multi },

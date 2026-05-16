@@ -15,6 +15,9 @@ namespace CupkekGames.BehaviourTrees
 
         public override Color HeaderColor => new Color(0.36f, 0.42f, 0.50f);
 
+        /// <summary>Play triangle — leaf "does something" indicator.</summary>
+        public override string IconGlyph => "▶";
+
         public override BTNode Clone()
         {
             return Instantiate(this);

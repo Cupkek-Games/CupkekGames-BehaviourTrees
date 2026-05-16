@@ -22,6 +22,9 @@ namespace CupkekGames.BehaviourTrees
 
         public override Color HeaderColor => new Color(0.45f, 0.30f, 0.55f);
 
+        /// <summary>Diamond — wraps/modifies a single child.</summary>
+        public override string IconGlyph => "◆";
+
         /// <summary>
         /// Resolve this decorator's single child via the owner tree's
         /// connections. Falls back to the legacy <see cref="Child"/> field
