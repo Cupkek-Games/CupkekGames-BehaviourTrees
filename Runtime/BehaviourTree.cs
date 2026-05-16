@@ -151,6 +151,34 @@ namespace CupkekGames.BehaviourTrees
                 _rootNode = null;
         }
 
+#if UNITY_EDITOR
+        /// <summary>
+        /// After cloning for editing, <c>_rootNode</c> on the clone still
+        /// references the original's root SO. Remap to the clone's own
+        /// node with the same Guid so subsequent edits don't bleed back.
+        /// </summary>
+        protected override void OnClonedFromOriginal(GraphAssetSO original)
+        {
+            base.OnClonedFromOriginal(original);
+            if (_rootNode != null)
+                _rootNode = FindBTNode(_rootNode.Guid) as BTNodeRoot;
+        }
+
+        /// <summary>
+        /// On save, rewire the on-disk asset's <c>_rootNode</c> to its
+        /// own (possibly newly-created) subasset that matches the
+        /// working copy's root Guid.
+        /// </summary>
+        protected override void OnApplyToOriginal(GraphAssetSO workingCopy)
+        {
+            base.OnApplyToOriginal(workingCopy);
+            var src = (BehaviourTree)workingCopy;
+            _rootNode = src._rootNode != null
+                ? FindBTNode(src._rootNode.Guid) as BTNodeRoot
+                : null;
+        }
+#endif
+
         // ---------------------------------------------------------------
         // Connection helpers
         // ---------------------------------------------------------------
