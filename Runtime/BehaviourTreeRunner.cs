@@ -41,10 +41,6 @@ namespace CupkekGames.BehaviourTrees
             _originalTree = originalTree;
             _runtimeClone = _originalTree.Clone();
             Blackboard = new GraphBlackboard();
-            // Seed declared variable defaults into the blackboard before
-            // any node runs. Authored values land in globals — overrides
-            // happen via frame.SetLocal in scoped decorators.
-            BlackboardSeeder.Apply(_originalTree, Blackboard);
             RootFrame = new GraphFrame(Blackboard);
 
             ActiveRunners.Add(this);
