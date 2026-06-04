@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-using CupkekGames.Data.Primitives;
 using CupkekGames.Graphs;
 using CupkekGames.Graphs.Editor;
 
@@ -28,6 +26,12 @@ namespace CupkekGames.BehaviourTrees.Editor
                 tree.InitializeEditor();
         }
 
+        // Tree shape: no cycles — via the base EnforceAcyclic opt-in
+        // (GraphTopology.WouldCreateCycle), replacing the hand-rolled walk that
+        // was byte-identical to NavGraphCanvas's. Single-parent comes from
+        // base.CanConnect's Single-port occupancy check.
+        protected override bool EnforceAcyclic => true;
+
         protected override bool CanConnect(PortElement source, PortElement target)
         {
             if (!base.CanConnect(source, target)) return false;
@@ -35,35 +39,7 @@ namespace CupkekGames.BehaviourTrees.Editor
             // Root nodes are sinks at the top — nothing can connect INTO them.
             if (target.OwnerNode.Node is BTNodeRoot) return false;
 
-            // Tree shape: no cycles. If we can already reach `source` by
-            // walking forward from `target`, the new edge would close a loop.
-            if (WouldCreateCycle(source.OwnerNode.Node, target.OwnerNode.Node))
-                return false;
-
             return true;
-        }
-
-        bool WouldCreateCycle(GraphNodeSO from, GraphNodeSO toReach)
-        {
-            if (Asset == null) return false;
-
-            var visited = new HashSet<string>();
-            var stack = new Stack<SerializedGuid>();
-            stack.Push(toReach.Guid);
-
-            while (stack.Count > 0)
-            {
-                var cur = stack.Pop();
-                if (cur == from.Guid) return true;
-                if (!visited.Add(cur.ValueStr)) continue;
-
-                foreach (var conn in Asset.Connections)
-                {
-                    if (conn.SourceNodeGuid == cur)
-                        stack.Push(conn.TargetNodeGuid);
-                }
-            }
-            return false;
         }
 
         protected override NodeElement CreateNodeElement(GraphNodeSO node)

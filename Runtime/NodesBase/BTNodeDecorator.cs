@@ -35,14 +35,11 @@ namespace CupkekGames.BehaviourTrees
         {
             if (OwnerTree != null)
             {
-                foreach (var conn in OwnerTree.Connections)
-                {
-                    if (conn.SourceNodeGuid == Guid)
-                    {
-                        var found = OwnerTree.FindBTNode(conn.TargetNodeGuid);
-                        if (found != null) return found;
-                    }
-                }
+                // Single child via the shared GraphTopology walk (lowest
+                // OrderIndex); the legacy Child fallback stays until migration.
+                var children = GraphTopology.ChildrenOf(OwnerTree, this);
+                for (int i = 0; i < children.Count; i++)
+                    if (children[i] is BTNode bt) return bt;
             }
             return Child;
         }
