@@ -39,6 +39,12 @@ namespace CupkekGames.BehaviourTrees
             }
         }
 
+#if UNITY_EDITOR
+        // Play-mode overlay: paint each node's running/success/fail status from a
+        // selected live BehaviourTreeRunner (multi-instance — the canvas shows a picker).
+        public override IGraphRuntimeStateSource CreateRuntimeStateSource() => new BTRuntimeStateSource(this);
+#endif
+
         // ---------------------------------------------------------------
         // Editor convenience
         // ---------------------------------------------------------------
