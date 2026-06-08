@@ -20,6 +20,12 @@ namespace CupkekGames.BehaviourTrees
         /// </summary>
         public static readonly List<BehaviourTreeRunner> ActiveRunners = new List<BehaviourTreeRunner>();
 
+        // Under "Enter Play Mode Without Domain Reload" a runner not Dispose()'d on teardown
+        // would linger in this static list across sessions (the editor BT overlay reads it).
+        // Clear at each play-enter as a safety net; live runners re-Add in their constructor.
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics() => ActiveRunners.Clear();
+
         private BehaviourTree _originalTree;
         public BehaviourTree OriginalTree => _originalTree;
 
