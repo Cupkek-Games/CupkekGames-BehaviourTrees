@@ -75,6 +75,11 @@ namespace CupkekGames.BehaviourTrees
 
         public override IEnumerable<GraphValidationIssue> Validate()
         {
+            // Structural: deleted endpoint nodes / stale port ids — the
+            // base-class default this override replaces.
+            foreach (var issue in GraphConnectionValidation.Validate(this))
+                yield return issue;
+
             if (_rootNode == null)
             {
                 yield return new GraphValidationIssue
