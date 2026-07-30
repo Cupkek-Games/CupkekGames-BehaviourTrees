@@ -1,7 +1,7 @@
 {
   "name": "com.cupkekgames.behaviourtrees",
   "displayName": "CupkekGames BehaviourTrees",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "author": {
     "name": "CupkekGames",
     "url": "https://www.docs.cupkek.games"
@@ -17,6 +17,6 @@
   ],
   "dependencies": {
     "com.cupkekgames.singletons": "0.1.3",
-    "com.cupkekgames.graphs": "0.4.1"
+    "com.cupkekgames.graphs": "0.4.2"
   }
 }
