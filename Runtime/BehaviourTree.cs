@@ -205,7 +205,7 @@ namespace CupkekGames.BehaviourTrees
             return null;
         }
 
-        /// <summary>Children of <paramref name="parent"/> via connections (or legacy fields as fallback).</summary>
+        /// <summary>Children of <paramref name="parent"/> via connections.</summary>
         public IReadOnlyList<BTNode> GetChildren(BTNode parent)
         {
             return parent switch
@@ -220,7 +220,7 @@ namespace CupkekGames.BehaviourTrees
 
         /// <summary>
         /// Depth-first traversal from <paramref name="node"/>. Walks
-        /// children via connections (or legacy fields).
+        /// children via connections.
         /// </summary>
         public void Traverse(BTNode node, Action<BTNode> visitor)
         {
