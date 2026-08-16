@@ -16,7 +16,7 @@ namespace CupkekGames.BehaviourTrees
     /// adds the runtime traversal, the convenience root reference, and
     /// the runtime-clone bookkeeping.
     /// </summary>
-    [CreateAssetMenu(fileName = "BehaviourTree", menuName = "CupkekGames/BehaviourTree/BehaviourTree")]
+    [CreateAssetMenu(fileName = "BehaviourTree", menuName = "CupkekGames/BehaviourTrees/Behaviour Tree")]
     public class BehaviourTree : GraphAssetSO
     {
         private BTNodeRuntimeState _state = BTNodeRuntimeState.Running;
