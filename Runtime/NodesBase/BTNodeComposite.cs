@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using CupkekGames.Graphs;
 using UnityEngine;
+using Unity.Scripting.LifecycleManagement;
 
 namespace CupkekGames.BehaviourTrees
 {
@@ -9,7 +10,7 @@ namespace CupkekGames.BehaviourTrees
     /// <see cref="BehaviourTree"/>'s connection list, ordered by
     /// <see cref="GraphConnection.OrderIndex"/>.
     /// </summary>
-    public abstract class BTNodeComposite : BTNode
+    public abstract partial class BTNodeComposite : BTNode
     {
         public override IReadOnlyList<GraphPortDef> OutputPorts => MultiOutput;
 
@@ -18,6 +19,7 @@ namespace CupkekGames.BehaviourTrees
         /// <summary>Three-bar glyph — composites fan out to multiple children.</summary>
         public override string IconGlyph => "≡";
 
+        [NoAutoStaticsCleanup]
         static readonly IReadOnlyList<GraphPortDef> MultiOutput = new[]
         {
             new GraphPortDef { Capacity = PortCapacity.Multi },

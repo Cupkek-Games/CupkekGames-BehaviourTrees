@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using CupkekGames.Graphs;
 using UnityEngine;
+using Unity.Scripting.LifecycleManagement;
 
 namespace CupkekGames.BehaviourTrees
 {
@@ -10,7 +11,7 @@ namespace CupkekGames.BehaviourTrees
     /// per running agent — clone keeps node state isolated from other
     /// agents executing the same asset.
     /// </summary>
-    public class BehaviourTreeRunner
+    public partial class BehaviourTreeRunner
     {
         /// <summary>
         /// Every runner currently alive. Populated in the constructor,
@@ -18,14 +19,12 @@ namespace CupkekGames.BehaviourTrees
         /// reflect runtime state back onto authored nodes (per-node
         /// state pulse during play).
         /// </summary>
-        public static readonly List<BehaviourTreeRunner> ActiveRunners = new List<BehaviourTreeRunner>();
+        [AutoStaticsCleanup]
+        public static List<BehaviourTreeRunner> ActiveRunners = new List<BehaviourTreeRunner>();
 
         // Under "Enter Play Mode Without Domain Reload" a runner not Dispose()'d on teardown
         // would linger in this static list across sessions (the editor BT overlay reads it).
         // Clear at each play-enter as a safety net; live runners re-Add in their constructor.
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        static void ResetStatics() => ActiveRunners.Clear();
-
         private BehaviourTree _originalTree;
         public BehaviourTree OriginalTree => _originalTree;
 

@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using CupkekGames.Graphs;
 using UnityEngine;
+using Unity.Scripting.LifecycleManagement;
 
 namespace CupkekGames.BehaviourTrees
 {
@@ -18,13 +19,16 @@ namespace CupkekGames.BehaviourTrees
     /// <c>BTNodeElement</c> indicator (which polled EditorApplication.update once per
     /// node). Matches runners to this graph by node <c>Guid</c>.
     /// </summary>
-    internal sealed class BTRuntimeStateSource : IGraphRuntimeStateSource, IGraphRuntimeInstanceSelector, IGraphRuntimePollable
+    internal sealed partial class BTRuntimeStateSource : IGraphRuntimeStateSource, IGraphRuntimeInstanceSelector, IGraphRuntimePollable
     {
         static readonly Color RunningColor = new Color(1f, 0.83f, 0.40f);
         static readonly Color SuccessColor = new Color(0.45f, 0.85f, 0.50f);
         static readonly Color FailColor    = new Color(0.95f, 0.40f, 0.40f);
+        [NoAutoStaticsCleanup]
         static readonly NodeBadge RunningBadge = new NodeBadge("running", new Color(0.62f, 0.50f, 0.22f), "Currently executing.");
+        [NoAutoStaticsCleanup]
         static readonly NodeBadge SuccessBadge = new NodeBadge("ok",      new Color(0.30f, 0.55f, 0.34f), "Last tick: success.");
+        [NoAutoStaticsCleanup]
         static readonly NodeBadge FailBadge    = new NodeBadge("fail",    new Color(0.60f, 0.28f, 0.28f), "Last tick: failure.");
 
         readonly HashSet<string> _myGuids = new();
